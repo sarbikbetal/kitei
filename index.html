@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kitei</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bulma@0.9.0/css/bulma.min.css">
+
+</head>
+
+<body>
+    <div class="columns is-centered">
+        <div class="column is-half-tablet">
+            <div class="card">
+                <header class="card-header">
+                    <p class="card-header-title">
+                        Component
+                    </p>
+                </header>
+                <div class="card-content">
+                    <div class="content">
+                        <div class="field">
+                            <label class="label">URL:</label>
+                            <div class="control">
+                                <textarea class="textarea" rows="2" id="url"
+                                    placeholder="http://abc.com/zym.pdf"></textarea>
+                            </div>
+                        </div>
+                        <div class="field">
+                            <label class="label">File name</label>
+                            <div class="control">
+                                <input class="input" type="text" id="name" placeholder="Filename">
+                            </div>
+                        </div>
+                    </div>
+                    <div class="level">
+                        <div class="level-left"></div>
+                        <div class="level-right">
+                            <button id="send" class=" button is-primary is-light">Preview</button>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+        </div>
+    </div>
+
+
+
+    <script>
+        const aggregateData = () => {
+            let data = {
+                type: "download",
+                job: {
+                    url: document.getElementById("url").value,
+                    name: document.getElementById("name").value
+                }
+            }
+            return data;
+        };
+
+        let btn = document.getElementById("send");
+
+        function startWebsocket() {
+            let socket = new WebSocket(`wss://kitei.herokuapp.com`);
+
+            const sendData = () => {
+                let data = aggregateData();
+                socket.send(JSON.stringify(data));
+            }
+
+            socket.onopen = () => {
+                console.log("Connection established");
+
+                btn.addEventListener("click", sendData)
+            };
+
+            socket.onmessage = (event) => {
+                console.log(event.data);
+            };
+
+            socket.onclose = (event) => {
+                socket = null;
+                btn.removeEventListener("click", sendData);
+                setTimeout(startWebsocket, 5000);
+            }
+        }
+
+        startWebsocket();
+    </script>
+</body>
+
+</html>
