@@ -50,7 +50,7 @@ convertTask.process((job, done) => {
 })
 
 const addDelete = (job) => {
-    return deleteTask.createJob(job).delayUntil(Date.now() + 60 * 1000).save();
+    return deleteTask.createJob(job).delayUntil(Date.now() + 30 * 60 * 1000).save();
 }
 
 deleteTask.process((job, done) => {
@@ -75,34 +75,54 @@ const init = (server) => {
                 // queue the job and save it in a variable
                 console.log(message.job);
                 let job = await addDownload(message.job);
-                ws.send("Job queued");
+                let info = {
+                    type: "info",
+                    data: "Your file is being downloaded."
+                };
+                ws.send(JSON.stringify(info));
 
 
                 // add an event lister for job complete event
                 job.on("succeeded", async () => {
                     // send the url
-                    ws.send("File downloaded, ready for conversion");
+                    let info = {
+                        type: "info",
+                        data: "File downloaded, ready for conversion."
+                    };
+                    ws.send(JSON.stringify(info));
                     // convert(`${message.job.name}.pdf`, 100);
                     let convertJob = await addConvert(message.job);
                     convertJob.on("succeeded", (filename) => {
-                        ws.send("File converted");
-                        ws.send(filename);
+                        info = {
+                            type: "info",
+                            data: "Converion complete"
+                        };
+                        ws.send(JSON.stringify(info));
+                        ws.send(JSON.stringify({
+                            type: "url",
+                            data: `view/${filename}`
+                        }));
                         deleteFile(`./public/${message.job.name}.pdf`);
                         addDelete(`./public/${filename}`);
                     });
 
                     convertJob.on("failed", (err) => {
-                        console.log(err.name);
-                        ws.send(err.name);
+                        let errorObject = { type: "error", data: err.message };
+                        console.log(errorObject);
+                        ws.send(JSON.stringify(errorObject));
                     });
                 });
 
                 job.on("failed", (err) => {
-                    console.log(err.name);
-                    ws.send(err.name);
+                    let errorObject = { type: "error", data: err.message };
+                    console.log(errorObject, err);
+                    ws.send(JSON.stringify(errorObject));
                 });
             } else {
-                ws.send("Invalid data");
+                ws.send(JSON.stringify({
+                    type: "error",
+                    data: "Invalid data"
+                }));
             }
         });
     });

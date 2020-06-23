@@ -1,6 +1,7 @@
 const fs = require('fs');
 const http = require('http');
 const util = require('util');
+const fetch = require('node-fetch');
 const exec = util.promisify(require('child_process').exec);
 
 
@@ -24,7 +25,9 @@ const download = (url, dest, cb) => {
         } else {
             cb({ code: response.statusCode, message: response.statusMessage });
         }
-    }).on('error', (err) => { // Handle errors
+    });
+
+    request.on('error', (err) => { // Handle errors
         fs.unlink(dest, () => { console.log(err) }); // Delete the file async. (But we don't check the result)
         if (cb) cb(err.message);
     });
@@ -59,18 +62,16 @@ module.exports = {
     deleteFile: deleteFile
 }
 
-// let job = {
-//     url: 'http://ws06.longfiles.com/files/2/edmogz7qyq3ai7/Seventh-day%20Adventists%20and%20the%20Civil%20Rights%20Movement.pdf',
-//     name: 'adcad'
-// };
 
-// download(job.url, path.join(__dirname, `public/${job.name}.pdf`), function (err) {
-//     if (err) {
-//         console.log(err);
-//         done(err);
-//     }
-//     else {
-//         console.log("File downloaded");
-//         done();
-//     }
-// });
+download('http://documentcloud.adobe.com/view-sdk-demo/PDFs/Overview.pdf',
+    __dirname + `/public/adobe.pdf`,
+    function (err) {
+        if (err) {
+            console.log(err);
+            done(err);
+        }
+        else {
+            console.log("File downloaded");
+            done();
+        }
+    });
