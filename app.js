@@ -5,6 +5,7 @@ const express = require('express');
 const http = require('http');
 const controller = require('./controller.js');
 const whiskers = require("whiskers");
+const enforce = require('express-sslify');
 
 // Inits
 const app = express();
@@ -13,6 +14,13 @@ app.use(express.urlencoded({ extended: false }));
 app.use(express.static('public'))
 app.engine('.html', whiskers.__express);
 app.set('views', __dirname + '/views');
+
+// Check for production env and upgrade to https
+if (process.env.NODE_ENV === 'production') {
+    app.use(enforce.HTTPS({
+        trustProtoHeader: true
+    }));
+}
 
 const server = http.createServer(app);
 controller.init(server);
