@@ -3,34 +3,29 @@ const http = require('http');
 const util = require('util');
 const fetch = require('node-fetch');
 const exec = util.promisify(require('child_process').exec);
+const streamPipeline = util.promisify(require('stream').pipeline);
 
-
-const download = (url, dest, cb) => {
-    var file = fs.createWriteStream(dest);
-    var request = http.get(url, (response) => {
-        if (response.statusCode == 200) {
-            var totalSize = parseInt(response.headers['content-length'], 10);
-            response.pipe(file);
-
-            var timer = setInterval(() => {
-                let percentage = (file.bytesWritten / totalSize) * 100;
-                console.log(`Downloaded: ${file.bytesWritten}/${totalSize} ---- ${percentage.toFixed(2)}%`)
-            }, 700);
-
-            file.on('finish', () => {
+const download = (url, dest) => {
+    return new Promise((resolve, reject) => {
+        fetch(url).then(async (response) => {
+            if (response.ok) {
+                let file = fs.createWriteStream(dest);
+                let totalSize = response.headers.get('content-length');
+                let timer = setInterval(() => {
+                    let percentage = (file.bytesWritten / totalSize) * 100;
+                    console.log(`Downloaded: ${file.bytesWritten}/${totalSize} ---- ${percentage.toFixed(2)}%`)
+                }, 700);
+                await streamPipeline(response.body, file);
                 console.log(`Download Path: ${file.path}`);
                 clearInterval(timer);
-                file.close(cb); // close() is async, call cb after close completes.
-            });
-        } else {
-            cb({ code: response.statusCode, message: response.statusMessage });
-        }
-    });
-
-    request.on('error', (err) => { // Handle errors
-        fs.unlink(dest, () => { console.log(err) }); // Delete the file async. (But we don't check the result)
-        if (cb) cb(err.message);
-    });
+                resolve();
+            } else {
+                reject(response.statusText);
+            }
+        }).catch((err)=>{
+            reject(err.message);
+        })
+    })
 };
 
 
@@ -62,16 +57,25 @@ module.exports = {
     deleteFile: deleteFile
 }
 
+const download2 = (url, dest) => {
+    // try {
+    //     const response = await fetch(url);
+    //     if (response.ok) {
+    //         let file = fs.createWriteStream(dest);
+    //         let totalSize = response.headers.get('content-length');
+    //         let timer = setInterval(() => {
+    //             let percentage = (file.bytesWritten / totalSize) * 100;
+    //             console.log(`Downloaded: ${file.bytesWritten}/${totalSize} ---- ${percentage.toFixed(2)}%`)
+    //         }, 700);
+    //         await streamPipeline(response.body, file);
+    //         console.log(`Download Path: ${file.path}`);
+    //         clearInterval(timer);
+    //         return;
+    //     } else
+    //         throw new Error(response.statusText);
+    // } catch (error) {
+    //     console.log(error);
+    //     throw new Error(error);
+    // }
+}
 
-download('http://documentcloud.adobe.com/view-sdk-demo/PDFs/Overview.pdf',
-    __dirname + `/public/adobe.pdf`,
-    function (err) {
-        if (err) {
-            console.log(err);
-            done(err);
-        }
-        else {
-            console.log("File downloaded");
-            done();
-        }
-    });

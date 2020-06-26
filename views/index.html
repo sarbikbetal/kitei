@@ -30,11 +30,12 @@
                 <div class="column is-half-tablet">
                     <div class="card">
                         <header class="card-header">
-                            <p class="card-header-title">
-                                Component
-                            </p>
+                            <p id="msg-box" class="card-header-title has-background-warning">Hello there!</p>
                         </header>
                         <div class="card-content">
+                            <div id="loader" class="level is-hidden">
+                                <progress class="progress is-small is-primary" max="100">15%</progress>
+                            </div>
                             <div class="content">
                                 <div class="field">
                                     <label class="label">URL:</label>
@@ -50,18 +51,12 @@
                                     </div>
                                 </div>
                             </div>
-                            <div id="loader" class="level is-hidden">
-                                <progress class="progress is-small is-primary" max="100">15%</progress>
-                            </div>
                             <div class="columns is-vcentered">
-                                <div class="column is-two-thirds">
-                                    <p id="msg-box" class="px-2 py-1 is-size-5 has-background-warning">Hello there!</p>
-                                </div>
                                 <div class="column has-text-right">
-                                    <button id="send" class=" button is-primary is-light">Preview</button>
+                                    <button id="send" class="button is-rounded is-primary is-light">Compress</button>
+                                    <a id="view" class="button is-rounded is-primary is-light is-hidden">Preview</a>
                                 </div>
                             </div>
-
                         </div>
                     </div>
                 </div>
@@ -72,16 +67,29 @@
 
 
     <script>
-        let btn = document.getElementById("send");
+        let sendBtn = document.getElementById("send");
+        let viewBtn = document.getElementById("view");
         let messageBox = document.getElementById("msg-box");
         let loader = document.getElementById("loader");
+
+        function stopLoading() {
+            sendBtn.disabled = false;
+            sendBtn.classList.remove('is-loading');
+            loader.classList.add("is-hidden");
+        }
+
+        function startLoading() {
+            sendBtn.disabled = true;
+            sendBtn.classList.add('is-loading');
+            loader.classList.remove("is-hidden");
+        }
 
         const aggregateData = () => {
             let data = {
                 type: "download",
                 job: {
                     url: document.getElementById("url").value,
-                    name: document.getElementById("name").value
+                    name: document.getElementById("name").value || "document"
                 }
             }
             return data;
@@ -93,15 +101,16 @@
             const sendData = () => {
                 let data = aggregateData();
                 socket.send(JSON.stringify(data));
-                btn.disabled = true;
-                loader.classList.remove("is-hidden");
+                startLoading();
             }
 
             socket.onopen = () => {
                 console.log("Connected to server");
                 messageBox.innerText = "Connected to server 😇";
-                btn.addEventListener("click", sendData);
-                btn.disabled = false;
+                messageBox.classList.remove("has-background-danger");
+                messageBox.classList.add("has-background-warning");
+                sendBtn.addEventListener("click", sendData);
+                sendBtn.disabled = false;
             };
 
             socket.onmessage = (event) => {
@@ -111,21 +120,26 @@
                     messageBox.innerText = info.data;
                     messageBox.classList.remove("has-background-danger");
                     messageBox.classList.add("has-background-warning");
-                }
-                if (info.type == "error") {
+                } else if (info.type == "error") {
                     messageBox.innerText = info.data;
                     messageBox.classList.remove("has-background-warning");
                     messageBox.classList.add("has-background-danger");
-                    btn.disabled = false;
-                    loader.classList.add("is-hidden");
+                    stopLoading();
+                } else if (info.type == "url") {
+                    viewBtn.setAttribute("href", info.data);
+                    viewBtn.classList.remove("is-hidden");
+                } else if (info.type == "finish") {
+                    stopLoading();
                 }
             };
 
             socket.onclose = (event) => {
                 socket = null;
-                btn.disabled = true;
+                sendBtn.disabled = true;
                 messageBox.innerText = "Disconnected from server 🤕"
-                btn.removeEventListener("click", sendData);
+                messageBox.classList.remove("has-background-warning");
+                messageBox.classList.add("has-background-danger");
+                sendBtn.removeEventListener("click", sendData);
                 setTimeout(startWebsocket, 5000);
             }
         }
