@@ -72,7 +72,8 @@ const init = (server) => {
             message = JSON.parse(message);
             if (message.type == "download" && message.job.url) {
 
-                // queue the job and save it in a variable
+                // enqueue the job and save it in a variable
+                message.job.name = message.job.name.trim().replace(/[^a-z0-9]/gi, "_") || "document";
                 console.log(message.job);
                 let job = await addDownload(message.job);
                 let info = {

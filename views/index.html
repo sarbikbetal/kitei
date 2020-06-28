@@ -52,6 +52,10 @@
                                 </div>
                             </div>
                             <div class="columns is-vcentered">
+                                <div class="column has-text-left">
+                                    <span id="initialSize" class="tag is-warning is-light">Initial:</span>
+                                    <span id="finalSize" class="tag is-primary is-light">Final:</span>
+                                </div>
                                 <div class="column has-text-right">
                                     <button id="send" class="button is-rounded is-primary is-light">Compress</button>
                                     <a id="view" class="button is-rounded is-primary is-light is-hidden">Preview</a>
@@ -84,16 +88,36 @@
             loader.classList.remove("is-hidden");
         }
 
-        const aggregateData = () => {
+        function aggregateData() {
             let data = {
                 type: "download",
                 job: {
                     url: document.getElementById("url").value,
-                    name: document.getElementById("name").value || "document"
+                    name: document.getElementById("name").value.trim().replace(/[^a-z0-9]/gi, "_") || "document"
                 }
             }
             return data;
         };
+
+        function messageHandler(info) {
+            if (info.type == "info") {
+                messageBox.innerText = info.data;
+                messageBox.classList.remove("has-background-danger");
+                messageBox.classList.add("has-background-warning");
+            } else if (info.type == "error") {
+                messageBox.innerText = info.data;
+                messageBox.classList.remove("has-background-warning");
+                messageBox.classList.add("has-background-danger");
+                stopLoading();
+            } else if (info.type == "url") {
+                viewBtn.setAttribute("href", info.data);
+                viewBtn.classList.remove("is-hidden");
+            } else if (info.type == "size") {
+                document.getElementById(info.elem).value = info.size;
+            } else if (info.type == "finish") {
+                stopLoading();
+            }
+        }
 
         function startWebsocket() {
             let socket = new WebSocket("{ws_host}");
@@ -116,21 +140,7 @@
             socket.onmessage = (event) => {
                 console.log(event.data);
                 let info = JSON.parse(event.data);
-                if (info.type == "info") {
-                    messageBox.innerText = info.data;
-                    messageBox.classList.remove("has-background-danger");
-                    messageBox.classList.add("has-background-warning");
-                } else if (info.type == "error") {
-                    messageBox.innerText = info.data;
-                    messageBox.classList.remove("has-background-warning");
-                    messageBox.classList.add("has-background-danger");
-                    stopLoading();
-                } else if (info.type == "url") {
-                    viewBtn.setAttribute("href", info.data);
-                    viewBtn.classList.remove("is-hidden");
-                } else if (info.type == "finish") {
-                    stopLoading();
-                }
+                messageHandler(info);
             };
 
             socket.onclose = (event) => {
