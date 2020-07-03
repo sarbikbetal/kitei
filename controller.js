@@ -25,7 +25,7 @@ const addDownload = (job) => {
 }
 
 downloadTask.process((job, done) => {
-    download(job.data.url, path.join(__dirname, `public/${job.data.name}.pdf`)).then(() => {
+    download(job, job.data.url, path.join(__dirname, `public/${job.data.name}.pdf`)).then(() => {
         console.log("File downloaded");
         done();
     }).catch((err) => {
@@ -39,7 +39,7 @@ const addConvert = (job) => {
 }
 
 convertTask.process((job, done) => {
-    convert(`${job.data.name}.pdf`, 100)
+    convert(job, `${job.data.name}.pdf`, 100)
         .then((filename) => {
             console.log("Compression complete");
             done(null, filename);
@@ -78,10 +78,18 @@ const init = (server) => {
                 let job = await addDownload(message.job);
                 let info = {
                     type: "info",
-                    data: "Your file is being downloaded."
+                    data: "Your file will be downloaded shortly.."
                 };
                 ws.send(JSON.stringify(info));
 
+                job.on("progress", (progress) => {
+                    let pg = {
+                        progress,
+                        type: "progress",
+                        data: "Downloading your file ..."
+                    };
+                    ws.send(JSON.stringify(pg));
+                })
 
                 // add an event lister for job complete event
                 job.on("succeeded", async () => {
@@ -93,6 +101,15 @@ const init = (server) => {
                     ws.send(JSON.stringify(info));
                     // convert(`${message.job.name}.pdf`, 100);
                     let convertJob = await addConvert(message.job);
+
+                    convertJob.on("progress", (progress) => {
+                        let pg = {
+                            progress: ((progress.done / progress.total)*100).toFixed(1),
+                            type: "progress",
+                            data: `Compressing ${progress.done}/${progress.total} -- `
+                        };
+                        ws.send(JSON.stringify(pg));
+                    })
                     convertJob.on("succeeded", (filename) => {
                         info = {
                             type: "info",

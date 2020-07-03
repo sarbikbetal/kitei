@@ -5,8 +5,16 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Kitei</title>
+    <link rel="apple-touch-icon" sizes="180x180" href="./assets/apple-touch-icon.png">
+    <link rel="icon" type="image/png" sizes="32x32" href="./assets/favicon-32x32.png">
+    <link rel="icon" type="image/png" sizes="16x16" href="./assets/favicon-16x16.png">
+    <link rel="manifest" href="./assets/site.webmanifest">
+    <link rel="mask-icon" href="./assets/safari-pinned-tab.svg" color="#5bbad5">
+    <link rel="shortcut icon" href="./assets/favicon.ico">
+    <meta name="msapplication-TileColor" content="#da532c">
+    <meta name="msapplication-config" content="./assets/browserconfig.xml">
+    <meta name="theme-color" content="#ffffff">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bulma@0.9.0/css/bulma.min.css">
-
 </head>
 
 <body>
@@ -27,14 +35,15 @@
     <section class="section">
         <div class="container">
             <div class="columns is-centered">
-                <div class="column is-half-tablet">
+                <div class="column is-three-fifths-tablet is-half-desktop">
                     <div class="card">
                         <header class="card-header">
                             <p id="msg-box" class="card-header-title has-background-warning">Hello there!</p>
                         </header>
                         <div class="card-content">
-                            <div id="loader" class="level is-hidden">
-                                <progress class="progress is-small is-primary" max="100">15%</progress>
+                            <div class="level">
+                                <progress id="loader" class="progress is-small is-primary is-hidden"
+                                    max="100"></progress>
                             </div>
                             <div class="content">
                                 <div class="field">
@@ -52,7 +61,7 @@
                                 </div>
                             </div>
                             <div class="columns is-vcentered">
-                                <div class="column has-text-left">
+                                <div class="column is-one-third has-text-left">
                                     <span id="initialSize" class="tag is-warning is-light">Initial:</span>
                                     <span id="finalSize" class="tag is-primary is-light">Final:</span>
                                 </div>
@@ -67,8 +76,6 @@
             </div>
         </div>
     </section>
-
-
 
     <script>
         let sendBtn = document.getElementById("send");
@@ -104,6 +111,7 @@
                 messageBox.innerText = info.data;
                 messageBox.classList.remove("has-background-danger");
                 messageBox.classList.add("has-background-warning");
+                loader.removeAttribute("value");
             } else if (info.type == "error") {
                 messageBox.innerText = info.data;
                 messageBox.classList.remove("has-background-warning");
@@ -112,6 +120,11 @@
             } else if (info.type == "url") {
                 viewBtn.setAttribute("href", info.data);
                 viewBtn.classList.remove("is-hidden");
+            } else if (info.type == "progress") {
+                loader.setAttribute("value", info.progress);
+                messageBox.innerText = info.data + " " + info.progress + "%";
+                messageBox.classList.remove("has-background-danger");
+                messageBox.classList.add("has-background-warning");
             } else if (info.type == "size") {
                 document.getElementById(info.elem).value = info.size;
             } else if (info.type == "finish") {

@@ -9,3 +9,5 @@ $ npm install gsx-pdf-optimize --global
 $ npm install
 $ npm start
 ```
+
+Icon made by [Pixel perfect](https://icon54.com/) from [Flaticon](https://www.flaticon.com/)

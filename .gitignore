@@ -2,4 +2,4 @@
 out/
 fontconfig/
 .env
-public/
+*.pdf
