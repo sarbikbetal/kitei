@@ -4,7 +4,6 @@
   "description": "",
   "main": "app.js",
   "scripts": {
-    "heroku-prebuild": "npm install gsx-pdf-optimize --global",
     "start": "node app.js"
   },
   "author": "Sarbik Betal",

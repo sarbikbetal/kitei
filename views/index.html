@@ -53,11 +53,13 @@
                                             placeholder="http://example.com/zym.pdf"></textarea>
                                     </div>
                                 </div>
-                                <div class="field">
-                                    <label class="label">File name:</label>
-                                    <div class="control">
-                                        <input class="input" type="text" id="name" placeholder="Filename">
-                                    </div>
+                                <label class="label">Quality</label>
+                                <div class="select">
+                                    <select id="dpi">
+                                        <option value="160">High</option>
+                                        <option selected value="100">Medium</option>
+                                        <option value="72">Low</option>
+                                    </select>
                                 </div>
                             </div>
                             <div class="columns is-vcentered">
@@ -106,7 +108,7 @@
                 type: "download",
                 job: {
                     url: document.getElementById("url").value,
-                    name: document.getElementById("name").value.trim().replace(/[^a-z0-9]/gi, "_") || "document"
+                    dpi: document.getElementById("dpi").value
                 }
             }
             return data;

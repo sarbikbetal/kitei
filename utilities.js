@@ -30,13 +30,32 @@ const download = (job, url, dest) => {
 };
 
 
-const convert = async (job, filename) => {
+const convert = async (job, filename, dpi) => {
     return new Promise((resolve, reject) => {
-        const outName = `${Date.now().toString(36)}/${filename}`;
-        let optimizer = spawn('gsx-pdf-optimize', [`./public/${filename}`, `./public/${outName}`, `--preset=ebook`, `--dpi=100`, `--quiet=false`]);
+        const outName = `${Date.now().toString(18)}.pdf`;
+
+        console.log(filename, outName);
+
+        dpi = dpi || 150;
+        let ghostScript = process.env.GSX_OPTIMIZE_COMMAND || 'gs';
+        let gsargs = [
+            '-sDEVICE=pdfwrite',
+            '-dCompatibilityLevel=1.4',
+            '-dPDFSETTINGS=/ebook',
+            `-dColorImageResolution=${dpi}`,
+            `-dMonoImageResolution=${dpi}`,
+            `-dGrayImageResolution=${dpi}`,
+            '-dNOPAUSE',
+            '-dBATCH',
+            '-dPrinted=false',
+            `-sOutputFile=./public/${outName}`,
+            `./public/${filename}`
+        ]
+
+        let optimizer = spawn(ghostScript, gsargs);
+        console.log(`Started conversion for ${outName} with ${dpi}dpi`);
 
         let totalPages = 1;
-
 
         optimizer.stdout.on('data', function (data) {
             let rx1 = /Processing pages 1 through (\d+)/m;
@@ -53,16 +72,21 @@ const convert = async (job, filename) => {
         });
 
         optimizer.stderr.on('data', function (data) {
-            let eobj = data.toString();
+            let eobj = "";
+            eobj += data.toString();
             if (eobj.includes("failed: true")) {
-                reject("Conversion failed");
                 console.log('stderr: ' + eobj);
+                reject("Failed to compress");
             }
         });
 
         optimizer.on('exit', function (code) {
-            console.log('ghostscript exited with code ' + code.toString());
-            resolve(outName);
+            let exitCode = code
+            console.log('ghostscript exited with code ' + exitCode);
+            if (exitCode)
+                reject("Conversion error, code " + exitCode);
+            else
+                resolve(outName);
         });
 
         optimizer.on('error', (err) => {

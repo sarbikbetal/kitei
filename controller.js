@@ -27,7 +27,7 @@ const addDownload = (job) => {
 }
 
 downloadTask.process((job, done) => {
-    download(job, job.data.url, path.join(__dirname, `public/${job.data.name}.pdf`)).then(() => {
+    download(job, job.data.url, path.join(__dirname, `public/${job.data.name}`)).then(() => {
         console.log("File downloaded");
         done();
     }).catch((err) => {
@@ -40,8 +40,8 @@ const addConvert = (job) => {
     return convertTask.createJob(job).save();
 }
 
-convertTask.process((job, done) => {
-    convert(job, `${job.data.name}.pdf`)
+convertTask.process(3, (job, done) => {
+    convert(job, job.data.name, job.data.dpi)
         .then((filename) => {
             console.log("Compression complete");
             done(null, filename);
@@ -56,7 +56,7 @@ const addDelete = (job) => {
     return deleteTask.createJob(job).delayUntil(Date.now() + 120 * 60 * 1000).save();
 }
 
-deleteTask.process((job, done) => {
+deleteTask.process(5, (job, done) => {
     deleteFile(job.data, true).then(() => {
         done();
     }).catch(err => {
@@ -76,7 +76,7 @@ const init = (server) => {
             if (message.type == "download" && message.job.url) {
 
                 // enqueue the job and save it in a variable
-                message.job.name = message.job.name.trim().replace(/[^a-z0-9]/gi, "_") || "document";
+                message.job.name = Date.now().toString(36) + ".pdf";
                 console.log(message.job);
                 let job = await addDownload(message.job);
                 let info = {
@@ -119,7 +119,7 @@ const init = (server) => {
                             data: "Compressed and ready"
                         };
                         ws.send(JSON.stringify(info));
-                        let ini = fs.statSync(`./public/${message.job.name}.pdf`).size;
+                        let ini = fs.statSync(`./public/${message.job.name}`).size;
                         let fnl = fs.statSync(`./public/${filename}`).size;
                         info = {
                             type: "size",
@@ -133,7 +133,7 @@ const init = (server) => {
                             data: `view/${filename}`
                         }));
                         ws.send(JSON.stringify({ type: "finish" }));
-                        deleteFile(`./public/${message.job.name}.pdf`);
+                        deleteFile(`./public/${message.job.name}`);
                         addDelete(`./public/${filename}`);
                     });
 

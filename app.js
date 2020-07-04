@@ -31,11 +31,10 @@ app.get('/', (req, res) => {
     });
 })
 
-app.get('/view/:dir/:file', (req, res) => {
-    let dir = req.params.dir;
+app.get('/view/:file', (req, res) => {
     let file = req.params.file;
-    let url = `${process.env.HOSTNAME}/${dir}/${file}`;
-    if (dir && file) {
+    let url = `${process.env.HOSTNAME}/${file}`;
+    if (file) {
         res.render("adobepdf.html", {
             url: url,
             filename: file,
