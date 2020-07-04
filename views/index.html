@@ -62,8 +62,14 @@
                             </div>
                             <div class="columns is-vcentered">
                                 <div class="column is-one-third has-text-left">
-                                    <span id="initialSize" class="tag is-warning is-light">Initial:</span>
-                                    <span id="finalSize" class="tag is-primary is-light">Final:</span>
+                                    <div>
+                                        <span id="initialSize" class="tag is-danger is-light mr-2 mb-2">Initial:</span>
+                                        <span id="finalSize" class="tag is-primary is-light mb-2">Final:</span>
+                                    </div>
+                                    <div>
+                                        <span id="compressionRatio" class="tag is-info is-light">Compression
+                                            ratio:</span>
+                                    </div>
                                 </div>
                                 <div class="column has-text-right">
                                     <button id="send" class="button is-rounded is-primary is-light">Compress</button>
@@ -126,7 +132,9 @@
                 messageBox.classList.remove("has-background-danger");
                 messageBox.classList.add("has-background-warning");
             } else if (info.type == "size") {
-                document.getElementById(info.elem).value = info.size;
+                document.getElementById('initialSize').innerText = "Initial: " + info.initial;
+                document.getElementById('finalSize').innerText = "Final: " + info.final;
+                document.getElementById('compressionRatio').innerText = "Compression ratio: " + info.ratio;
             } else if (info.type == "finish") {
                 stopLoading();
             }

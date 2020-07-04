@@ -1,6 +1,8 @@
 const Queue = require('bee-queue');
 const WebSocket = require('ws');
 const path = require('path');
+const fs = require('fs');
+const prettyBytes = require('pretty-bytes');
 const { convert, download, deleteFile } = require('./utilities');
 
 const options = {
@@ -39,7 +41,7 @@ const addConvert = (job) => {
 }
 
 convertTask.process((job, done) => {
-    convert(job, `${job.data.name}.pdf`, 100)
+    convert(job, `${job.data.name}.pdf`)
         .then((filename) => {
             console.log("Compression complete");
             done(null, filename);
@@ -50,11 +52,12 @@ convertTask.process((job, done) => {
 })
 
 const addDelete = (job) => {
-    return deleteTask.createJob(job).delayUntil(Date.now() + 60 * 60 * 1000).save();
+    // 1 hr timeout
+    return deleteTask.createJob(job).delayUntil(Date.now() + 1 * 60 * 1000).save();
 }
 
 deleteTask.process((job, done) => {
-    deleteFile(job.data).then(() => {
+    deleteFile(job.data, true).then(() => {
         done();
     }).catch(err => {
         done(err);
@@ -104,7 +107,7 @@ const init = (server) => {
 
                     convertJob.on("progress", (progress) => {
                         let pg = {
-                            progress: ((progress.done / progress.total)*100).toFixed(1),
+                            progress: ((progress.done / progress.total) * 100).toFixed(1),
                             type: "progress",
                             data: `Compressing ${progress.done}/${progress.total} -- `
                         };
@@ -115,6 +118,15 @@ const init = (server) => {
                             type: "info",
                             data: "Compressed and ready"
                         };
+                        ws.send(JSON.stringify(info));
+                        let ini = fs.statSync(`./public/${message.job.name}.pdf`).size;
+                        let fnl = fs.statSync(`./public/${filename}`).size;
+                        info = {
+                            type: "size",
+                            initial: prettyBytes(ini),
+                            final: prettyBytes(fnl),
+                            ratio: (((ini - fnl) / ini) * 100).toFixed(2) + '%'
+                        }
                         ws.send(JSON.stringify(info));
                         ws.send(JSON.stringify({
                             type: "url",

@@ -1,4 +1,5 @@
 const fs = require('fs');
+const path = require('path');
 const util = require('util');
 const fetch = require('node-fetch');
 const { spawn } = require('child_process');
@@ -29,10 +30,10 @@ const download = (job, url, dest) => {
 };
 
 
-const convert = async (job, filename, dpi) => {
+const convert = async (job, filename) => {
     return new Promise((resolve, reject) => {
         const outName = `${Date.now().toString(36)}/${filename}`;
-        let optimizer = spawn('gsx-pdf-optimize', [`./public/${filename}`, `./public/${outName}`, ` --dpi=${dpi}`, `--quiet=false`]);
+        let optimizer = spawn('gsx-pdf-optimize', [`./public/${filename}`, `./public/${outName}`, `--preset=ebook`, `--dpi=100`, `--quiet=false`]);
 
         let totalPages = 1;
 
@@ -71,9 +72,12 @@ const convert = async (job, filename, dpi) => {
     });
 }
 
-const deleteFile = async (filename) => {
+const deleteFile = async (filename, delDir = false) => {
     try {
+        console.log("filename", filename);
         await fs.promises.unlink(filename);
+        if (delDir)
+            await fs.promises.rmdir(path.dirname(filename));
         console.log(`${filename} was deleted`);
     } catch (error) {
         console.log(error);
