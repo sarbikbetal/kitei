@@ -1,6 +1,5 @@
 require('dotenv').config()
 
-const checkDiskSpace = require('./disks')
 const express = require('express');
 const http = require('http');
 const controller = require('./controller.js');

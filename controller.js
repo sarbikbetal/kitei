@@ -52,8 +52,8 @@ convertTask.process((job, done) => {
 })
 
 const addDelete = (job) => {
-    // 1 hr timeout
-    return deleteTask.createJob(job).delayUntil(Date.now() + 1 * 60 * 1000).save();
+    // 2 hr timeout
+    return deleteTask.createJob(job).delayUntil(Date.now() + 120 * 60 * 1000).save();
 }
 
 deleteTask.process((job, done) => {
