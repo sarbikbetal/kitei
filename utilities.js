@@ -13,7 +13,7 @@ const download = (job, url, dest) => {
                 let totalSize = response.headers.get('content-length');
                 let timer = setInterval(() => {
                     let percentage = (file.bytesWritten / totalSize) * 100;
-                    job.reportProgress(percentage.toFixed(2));
+                    job.reportProgress({ done: parseInt(file.bytesWritten), total: parseInt(totalSize) });
                     console.log(`Downloaded: ${file.bytesWritten}/${totalSize} ---- ${percentage.toFixed(2)}%`)
                 }, 700);
                 await streamPipeline(response.body, file);
@@ -36,12 +36,15 @@ const convert = async (job, filename, dpi) => {
 
         console.log(filename, outName);
 
-        dpi = dpi || 150;
+        dpi = dpi || 120;
         let ghostScript = process.env.GSX_OPTIMIZE_COMMAND || 'gs';
         let gsargs = [
             '-sDEVICE=pdfwrite',
             '-dCompatibilityLevel=1.4',
             '-dPDFSETTINGS=/ebook',
+            '-dPreserveEPSInfo=false',
+            '-dConvertCMYKImagesToRGB=true',
+            '-dColorImageDownsampleThreshold=1',
             `-dColorImageResolution=${dpi}`,
             `-dMonoImageResolution=${dpi}`,
             `-dGrayImageResolution=${dpi}`,
@@ -96,12 +99,10 @@ const convert = async (job, filename, dpi) => {
     });
 }
 
-const deleteFile = async (filename, delDir = false) => {
+const deleteFile = async (filename) => {
     try {
         console.log("filename", filename);
         await fs.promises.unlink(filename);
-        if (delDir)
-            await fs.promises.rmdir(path.dirname(filename));
         console.log(`${filename} was deleted`);
     } catch (error) {
         console.log(error);

@@ -3,3 +3,6 @@ out/
 fontconfig/
 .env
 *.pdf
+temp.txt
+TODO
+pdftron.html

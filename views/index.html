@@ -56,14 +56,14 @@
                                 <label class="label">Quality</label>
                                 <div class="select">
                                     <select id="dpi">
-                                        <option value="160">High</option>
-                                        <option selected value="100">Medium</option>
-                                        <option value="72">Low</option>
+                                        <option value="150">High</option>
+                                        <option selected value="130">Medium</option>
+                                        <option value="100">Low</option>
                                     </select>
                                 </div>
                             </div>
                             <div class="columns is-vcentered">
-                                <div class="column is-one-third has-text-left">
+                                <div id="insights" class="column is-one-third has-text-left is-hidden">
                                     <div>
                                         <span id="initialSize" class="tag is-danger is-light mr-2 mb-2">Initial:</span>
                                         <span id="finalSize" class="tag is-primary is-light mb-2">Final:</span>
@@ -130,10 +130,11 @@
                 viewBtn.classList.remove("is-hidden");
             } else if (info.type == "progress") {
                 loader.setAttribute("value", info.progress);
-                messageBox.innerText = info.data + " " + info.progress + "%";
+                messageBox.innerText = info.data + " - " + info.progress + "%";
                 messageBox.classList.remove("has-background-danger");
                 messageBox.classList.add("has-background-warning");
             } else if (info.type == "size") {
+                document.getElementById('insights').classList.remove('is-hidden');
                 document.getElementById('initialSize').innerText = "Initial: " + info.initial;
                 document.getElementById('finalSize').innerText = "Final: " + info.final;
                 document.getElementById('compressionRatio').innerText = "Compression ratio: " + info.ratio;
@@ -153,7 +154,7 @@
 
             socket.onopen = () => {
                 console.log("Connected to server");
-                messageBox.innerText = "Connected to server 😇";
+                messageBox.innerText = "Connected to server";
                 messageBox.classList.remove("has-background-danger");
                 messageBox.classList.add("has-background-warning");
                 sendBtn.addEventListener("click", sendData);
@@ -169,7 +170,7 @@
             socket.onclose = (event) => {
                 socket = null;
                 sendBtn.disabled = true;
-                messageBox.innerText = "Disconnected from server 🤕"
+                messageBox.innerText = "Disconnected from server"
                 messageBox.classList.remove("has-background-warning");
                 messageBox.classList.add("has-background-danger");
                 sendBtn.removeEventListener("click", sendData);

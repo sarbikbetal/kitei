@@ -57,7 +57,7 @@ const addDelete = (job) => {
 }
 
 deleteTask.process(5, (job, done) => {
-    deleteFile(job.data, true).then(() => {
+    deleteFile(job.data).then(() => {
         done();
     }).catch(err => {
         done(err);
@@ -87,9 +87,9 @@ const init = (server) => {
 
                 job.on("progress", (progress) => {
                     let pg = {
-                        progress,
+                        progress: ((progress.done / progress.total) * 100).toFixed(1),
                         type: "progress",
-                        data: "Downloading your file ..."
+                        data: `Downloaded ${prettyBytes(progress.done)} of ${prettyBytes(progress.total)}`
                     };
                     ws.send(JSON.stringify(pg));
                 })
@@ -109,7 +109,7 @@ const init = (server) => {
                         let pg = {
                             progress: ((progress.done / progress.total) * 100).toFixed(1),
                             type: "progress",
-                            data: `Compressing ${progress.done}/${progress.total} -- `
+                            data: `Compressing  ${progress.done}/${progress.total} pages`
                         };
                         ws.send(JSON.stringify(pg));
                     })
