@@ -3,6 +3,7 @@ require('dotenv').config()
 const express = require('express');
 const http = require('http');
 const controller = require('./controller.js');
+const wsInit = require("./socket");
 const whiskers = require("whiskers");
 const enforce = require('express-sslify');
 
@@ -22,13 +23,42 @@ if (process.env.NODE_ENV === 'production') {
 }
 
 const server = http.createServer(app);
-controller.init(server);
+wsInit(server);
+// controller.init(server);
 
 app.get('/', (req, res) => {
     res.render("index.html", {
         // cache: true,
         ws_host: process.env.WS_HOST
     });
+})
+
+
+app.get('/pdf', (req, res) => {
+    let id = req.query.id;
+    if (id)
+        res.render("progress.html", {
+            ws_host: process.env.WS_HOST
+        })
+    else
+        res.redirect('/');
+})
+
+app.post('/pdf', (req, res) => {
+    let { url, dpi } = req.body;
+
+    if (url && dpi) {
+        let id = Date.now().toString(36);
+        controller.addDownload({ url, dpi }, id)
+            .then((job) => {
+                let { id, data, status } = job;
+                res.json({ id, data, status });
+            }).catch((err) => {
+                res.json({ err: err })
+            })
+    } else {
+        res.sendStatus(400);
+    }
 })
 
 app.get('/view/:file', (req, res) => {

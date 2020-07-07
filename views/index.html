@@ -5,14 +5,14 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Kitei</title>
-    <link rel="apple-touch-icon" sizes="180x180" href="./assets/apple-touch-icon.png">
-    <link rel="icon" type="image/png" sizes="32x32" href="./assets/favicon-32x32.png">
-    <link rel="icon" type="image/png" sizes="16x16" href="./assets/favicon-16x16.png">
-    <link rel="manifest" href="./assets/site.webmanifest">
-    <link rel="mask-icon" href="./assets/safari-pinned-tab.svg" color="#5bbad5">
-    <link rel="shortcut icon" href="./assets/favicon.ico">
+    <link rel="apple-touch-icon" sizes="180x180" href="/assets/apple-touch-icon.png">
+    <link rel="icon" type="image/png" sizes="32x32" href="/assets/favicon-32x32.png">
+    <link rel="icon" type="image/png" sizes="16x16" href="/assets/favicon-16x16.png">
+    <link rel="manifest" href="/assets/site.webmanifest">
+    <link rel="mask-icon" href="/assets/safari-pinned-tab.svg" color="#5bbad5">
+    <link rel="shortcut icon" href="/assets/favicon.ico">
     <meta name="msapplication-TileColor" content="#da532c">
-    <meta name="msapplication-config" content="./assets/browserconfig.xml">
+    <meta name="msapplication-config" content="/assets/browserconfig.xml">
     <meta name="theme-color" content="#ffffff">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bulma@0.9.0/css/bulma.min.css">
 </head>
@@ -20,14 +20,14 @@
 <body>
     <section class="hero is-primary">
         <div class="hero-body">
-            <div class="container">
-                <h1 class="title">
-                    <!-- <img src="https://bulma.io/images/bulma-logo.png" width="112" height="28">  -->
-                    Kitei
-                </h1>
-                <h2 class="subtitle">
-                    Cloud PDF converter
-                </h2>
+            <div style="display: flex;">
+                <div style="flex-basis: 70px;">
+                    <img src="/assets/pdf.svg" height="64" width="64">
+                </div>
+                <div style="flex-grow: 1;">
+                    <h1 class="title"> Kitei </h1>
+                    <h2 class="subtitle"> Cloud PDF compressor </h2>
+                </div>
             </div>
         </div>
     </section>
@@ -62,21 +62,8 @@
                                     </select>
                                 </div>
                             </div>
-                            <div class="columns is-vcentered">
-                                <div id="insights" class="column is-one-third has-text-left is-hidden">
-                                    <div>
-                                        <span id="initialSize" class="tag is-danger is-light mr-2 mb-2">Initial:</span>
-                                        <span id="finalSize" class="tag is-primary is-light mb-2">Final:</span>
-                                    </div>
-                                    <div>
-                                        <span id="compressionRatio" class="tag is-info is-light">Compression
-                                            ratio:</span>
-                                    </div>
-                                </div>
-                                <div class="column has-text-right">
-                                    <button id="send" class="button is-rounded is-primary is-light">Compress</button>
-                                    <a id="view" class="button is-rounded is-primary is-light is-hidden">Preview</a>
-                                </div>
+                            <div class="column has-text-right">
+                                <button id="send" class="button is-rounded is-primary is-light">Compress</button>
                             </div>
                         </div>
                     </div>
@@ -87,98 +74,36 @@
 
     <script>
         let sendBtn = document.getElementById("send");
-        let viewBtn = document.getElementById("view");
-        let messageBox = document.getElementById("msg-box");
-        let loader = document.getElementById("loader");
 
-        function stopLoading() {
-            sendBtn.disabled = false;
-            sendBtn.classList.remove('is-loading');
-            loader.classList.add("is-hidden");
-        }
+        sendBtn.addEventListener('click', () => {
+            let data = aggregateData();
+            const options = {
+                method: 'POST',
+                body: JSON.stringify(data),
+                headers: {
+                    'Content-Type': 'application/json'
+                }
+            }
 
-        function startLoading() {
-            sendBtn.disabled = true;
-            sendBtn.classList.add('is-loading');
-            loader.classList.remove("is-hidden");
-        }
+            fetch("/pdf", options)
+                .then(res => res.json())
+                .then(data => {
+                    console.log(data);
+                    let { id, status } = data;
+                    if (status == 'created' && id)
+                        window.location.href = '/pdf/?id=' + id;
+
+                    // add a popup on else
+                });
+        })
 
         function aggregateData() {
             let data = {
-                type: "download",
-                job: {
-                    url: document.getElementById("url").value,
-                    dpi: document.getElementById("dpi").value
-                }
+                url: document.getElementById("url").value,
+                dpi: document.getElementById("dpi").value
             }
             return data;
         };
-
-        function messageHandler(info) {
-            if (info.type == "info") {
-                messageBox.innerText = info.data;
-                messageBox.classList.remove("has-background-danger");
-                messageBox.classList.add("has-background-warning");
-                loader.removeAttribute("value");
-            } else if (info.type == "error") {
-                messageBox.innerText = info.data;
-                messageBox.classList.remove("has-background-warning");
-                messageBox.classList.add("has-background-danger");
-                stopLoading();
-            } else if (info.type == "url") {
-                viewBtn.setAttribute("href", info.data);
-                viewBtn.classList.remove("is-hidden");
-            } else if (info.type == "progress") {
-                loader.setAttribute("value", info.progress);
-                messageBox.innerText = info.data + " - " + info.progress + "%";
-                messageBox.classList.remove("has-background-danger");
-                messageBox.classList.add("has-background-warning");
-            } else if (info.type == "size") {
-                document.getElementById('insights').classList.remove('is-hidden');
-                document.getElementById('initialSize').innerText = "Initial: " + info.initial;
-                document.getElementById('finalSize').innerText = "Final: " + info.final;
-                document.getElementById('compressionRatio').innerText = "Compression ratio: " + info.ratio;
-            } else if (info.type == "finish") {
-                stopLoading();
-            }
-        }
-
-        function startWebsocket() {
-            let socket = new WebSocket("{ws_host}");
-
-            const sendData = () => {
-                let data = aggregateData();
-                socket.send(JSON.stringify(data));
-                startLoading();
-            }
-
-            socket.onopen = () => {
-                console.log("Connected to server");
-                messageBox.innerText = "Connected to server";
-                messageBox.classList.remove("has-background-danger");
-                messageBox.classList.add("has-background-warning");
-                sendBtn.addEventListener("click", sendData);
-                sendBtn.disabled = false;
-            };
-
-            socket.onmessage = (event) => {
-                console.log(event.data);
-                let info = JSON.parse(event.data);
-                messageHandler(info);
-            };
-
-            socket.onclose = (event) => {
-                socket = null;
-                sendBtn.disabled = true;
-                messageBox.innerText = "Disconnected from server"
-                messageBox.classList.remove("has-background-warning");
-                messageBox.classList.add("has-background-danger");
-                sendBtn.removeEventListener("click", sendData);
-                setTimeout(startWebsocket, 5000);
-            }
-        }
-
-        startWebsocket();
     </script>
 </body>
 
