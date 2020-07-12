@@ -5,8 +5,6 @@ const fs = require('fs');
 const prettyBytes = require('pretty-bytes');
 const options = {
   isWorker: false,
-  removeOnSuccess: true,
-  removeOnFailure: true,
   redis: {
     host: process.env.DB_HOST,
     port: process.env.DB_PORT,
@@ -16,6 +14,11 @@ const options = {
 
 const downloadQueue = new Queue('kti_dwl', options);
 const compressQueue = new Queue('kti_cmp', options);
+const stagingQueue = new Queue('kti_stg', {
+  ...options,
+  storeJobs: false,
+  activateDelayedJobs: true
+});
 
 const init = (server) => {
   const wss = new WebSocket.Server({ server });
@@ -27,12 +30,15 @@ const init = (server) => {
       if (message.type == "probe" && id) {
         reportDownload(ws, id);
         reportCompress(ws, id);
+        reportStaging(ws, id);
       }
     });
-    ws
   });
 }
 
+const sendData = (ws, data) => {
+  ws.send(JSON.stringify(data));
+}
 
 const reportDownload = (ws, id) => {
   downloadQueue.getJob(id).then(job => {
@@ -44,12 +50,11 @@ const reportDownload = (ws, id) => {
           type: "progress",
           data: `Downloaded ${prettyBytes(progress.done)} of ${prettyBytes(progress.total)}`
         };
-        ws.send(JSON.stringify(pg));
+        sendData(ws, pg);
       });
 
       job.on("succeeded", () => {
-        console.log(`Activating compression progress report for ${id}`);
-        setTimeout(() => reportCompress(ws, id), 500);
+        ws.close(4007, "Please reconnect");
       });
 
     } else
@@ -60,43 +65,61 @@ const reportDownload = (ws, id) => {
 const reportCompress = (ws, id) => {
   compressQueue.getJob(id).then(job => {
     if (job) {
-
       job.on("progress", (progress) => {
         let pg = {
           progress: ((progress.done / progress.total) * 100).toFixed(1),
           type: "progress",
           data: `Compressing  ${progress.done}/${progress.total} pages`
         };
-        ws.send(JSON.stringify(pg));
+        sendData(ws, pg);
       });
 
       job.on("succeeded", (filename) => {
-        console.log(`Activating compression progress report for ${id}`);
-        info = {
+        console.log(`Sending compression progress report for ${id}`);
+        let info = {
           type: "info",
           data: "Compressed and ready"
         };
-        ws.send(JSON.stringify(info));
-        let ini = fs.statSync(`./public/${id}.pdf`).size;
-        let fnl = fs.statSync(`./public/${filename}`).size;
-        info = {
-          type: "size",
-          initial: prettyBytes(ini),
-          final: prettyBytes(fnl),
-          ratio: (((ini - fnl) / ini) * 100).toFixed(2) + '%'
-        }
-        ws.send(JSON.stringify(info));
-        ws.send(JSON.stringify({
-          type: "url",
-          data: `${filename}`
-        }));
-        ws.send(JSON.stringify({ type: "finish" }));
+        sendData(ws, info);
+        wrapup(ws, id, filename)
       })
-    }
-
-    else
+    } else
       console.log(`${id} : Compression job not found`);
   }).catch(console.log);
 }
+
+const reportStaging = (ws, id) => {
+  stagingQueue.getJob(id).then(job => {
+    if (job) {
+      wrapup(ws, id, job.data);
+    } else
+      console.log(`${id} : Staged job not found`);
+  }).catch(console.log);
+}
+
+const wrapup = (ws, id, filename) => {
+  let ini = fs.statSync(`./public/${id}.pdf`).size;
+  let fnl = fs.statSync(`./public/${filename}`).size;
+  let info = {
+    type: "size",
+    initial: prettyBytes(ini),
+    final: prettyBytes(fnl),
+    ratio: (((ini - fnl) / ini) * 100).toFixed(2) + '%'
+  }
+  sendData(ws, info);
+
+  info = { type: "url", data: `${filename}` }
+
+  sendData(ws, info);
+  sendData(ws, { type: "finish" });
+  ws.close(1000);
+}
+
+process.on('SIGINT', () => {
+  console.log("Gracefully shutting down");
+  downloadQueue.close(5);
+  compressQueue.close(5);
+  stagingQueue.close(5);
+});
 
 module.exports = init;

@@ -1,3 +1,4 @@
+console.log("Kitei is starting up ...");
 require('dotenv').config()
 
 const express = require('express');
@@ -78,4 +79,16 @@ app.get('/view/:file', (req, res) => {
 const PORT = process.env.PORT || 5000;
 server.listen(PORT, () => {
     console.log(`Server started at port:${PORT}`);
+});
+
+process.on('SIGTERM', () => {
+    console.log("Gracefully shutting down");
+    server.close(() => {
+        process.exit(0);
+    })
+});
+
+process.on('SIGINT', () => {
+    console.log("Gracefully shutting down");
+    server.close();
 });

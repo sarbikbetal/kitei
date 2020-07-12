@@ -13,6 +13,11 @@ const options = {
 
 const downloadQueue = new Queue('kti_dwl', options);
 const compressQueue = new Queue('kti_cmp', options);
+const stagingQueue = new Queue('kti_stg', {
+    ...options,
+    storeJobs: false,
+    activateDelayedJobs: true
+});
 
 downloadQueue.process((job) => {
     return download(job);
@@ -21,3 +26,19 @@ downloadQueue.process((job) => {
 compressQueue.process((job) => {
     return compress(job);
 })
+
+stagingQueue.process((job) => {
+    return new Promise((resolve, reject) => {
+        deleteFile(`${job.id}.pdf`)
+            .then(() => deleteFile(`${job.data}.pdf`))
+            .then(() => { resolve() })
+            .catch((err) => console.log("Error deleting files", err))
+    })
+})
+
+process.on('SIGINT', () => {
+    console.log("Gracefully shutting down");
+    downloadQueue.close(5);
+    compressQueue.close(5);
+    stagingQueue.close(5);
+});

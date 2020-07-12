@@ -18,7 +18,7 @@ const options = {
 
 const downloadQueue = new Queue('kti_dwl', options);
 const compressQueue = new Queue('kti_cmp', options);
-const deleteQueue = new Queue('delete', {
+const stagingQueue = new Queue('kti_stg', {
     ...options,
     storeJobs: false,
     activateDelayedJobs: true
@@ -43,12 +43,26 @@ const addCompress = (data, id) => {
 }
 
 compressQueue.on('job succeeded', (jobId, result) => {
-    console.log('\x1b[43m\x1b[30m%s\x1b[0m', `Compression complete ${jobId}->${result}`)
+    console.log('\x1b[43m\x1b[30m%s\x1b[0m', `Compression complete ${jobId}->${result}`);
+    addStaging(result, jobId);
 })
 
 compressQueue.on("job failed", (jobId, err) => {
     console.log("Compression failed for ", jobId, err);
 })
+
+const addStaging = (data, id) => {
+    return stagingQueue.createJob(data).setId(id).delayUntil(Date.now() + 2 * 60 * 1000).save();
+}
+
+
+process.on('SIGINT', () => {
+    console.log("Gracefully shutting down");
+    downloadQueue.close(5);
+    compressQueue.close(5);
+    stagingQueue.close(5);
+});
+
 
 module.exports = {
     addDownload

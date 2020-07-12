@@ -47,6 +47,9 @@
                                 <progress id="loader" class="progress is-small is-primary is-hidden"
                                     max="100"></progress>
                             </div>
+                            <div class="level">
+                                <h4 class="is-size-4">Getting the details from our server</h4>
+                            </div>
                             <div class="columns is-vcentered">
                                 <div id="insights" class="column is-one-third has-text-left is-hidden">
                                     <div>
@@ -61,7 +64,6 @@
                                 <div class="column has-text-right">
                                     <a id="download"
                                         class="button is-rounded is-primary is-light is-hidden">Download</a>
-                                    <a id="view" class="button is-rounded is-primary is-light is-hidden">Preview</a>
                                 </div>
                             </div>
                         </div>
@@ -72,7 +74,6 @@
     </section>
 
     <script>
-        let viewBtn = document.getElementById("view");
         let messageBox = document.getElementById("msg-box");
         let loader = document.getElementById("loader");
 
@@ -105,8 +106,6 @@
                 messageBox.classList.add("has-background-danger");
                 stopLoading();
             } else if (info.type == "url") {
-                viewBtn.setAttribute("href", "/view/" + info.data);
-                viewBtn.classList.remove("is-hidden");
                 document.getElementById('download').setAttribute("href", "/" + info.data);
                 document.getElementById('download').classList.remove("is-hidden");
             } else if (info.type == "progress") {
@@ -149,10 +148,18 @@
 
             socket.onclose = (event) => {
                 socket = null;
-                messageBox.innerText = "Disconnected from server"
-                messageBox.classList.remove("has-background-warning");
-                messageBox.classList.add("has-background-danger");
-                setTimeout(startWebsocket, 5000);
+                console.log("Close", event.code, event.reason);
+                if (event.code == 4007) {
+                    setTimeout(startWebsocket, 500);
+                } else if (event.code == 1000) {
+                    messageBox.innerText = "Ready to be downloaded";
+                }
+                else {
+                    messageBox.innerText = "Disconnected from server"
+                    messageBox.classList.remove("has-background-warning");
+                    messageBox.classList.add("has-background-danger");
+                    setTimeout(startWebsocket, 5000);
+                }
             }
         }
 
