@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kitei</title>
+    <link rel="apple-touch-icon" sizes="180x180" href="/assets/apple-touch-icon.png">
+    <link rel="icon" type="image/png" sizes="32x32" href="/assets/favicon-32x32.png">
+    <link rel="icon" type="image/png" sizes="16x16" href="/assets/favicon-16x16.png">
+    <link rel="manifest" href="/assets/site.webmanifest">
+    <link rel="mask-icon" href="/assets/safari-pinned-tab.svg" color="#5bbad5">
+    <link rel="shortcut icon" href="/assets/favicon.ico">
+    <meta name="msapplication-TileColor" content="#da532c">
+    <meta name="msapplication-config" content="/assets/browserconfig.xml">
+    <meta name="theme-color" content="#ffffff">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bulma@0.9.0/css/bulma.min.css">
+</head>
+
+<body>
+    <section class="hero is-primary">
+        <div class="hero-body">
+            <div class="container">
+                <div style="display: flex;">
+                    <div style="flex-basis: 70px;">
+                        <img src="/assets/pdf.svg" height="64" width="64">
+                    </div>
+                    <div style="flex-grow: 1;">
+                        <h1 class="title"> Kitei </h1>
+                        <h2 class="subtitle"> Cloud PDF compressor </h2>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section class="section">
+        <div class="container">
+            <div class="columns is-centered">
+                <div class="column is-three-fifths-tablet is-half-desktop">
+                    <div class="card">
+                        <header class="card-header">
+                            <p id="msg-box" class="card-header-title has-background-warning">Hello there!</p>
+                        </header>
+                        <div class="card-content">
+                            <div class="level">
+                                <progress id="loader" class="progress is-small is-primary is-hidden"
+                                    max="100"></progress>
+                            </div>
+                            <div class="level">
+                                <h4 class="is-size-4">Getting the details from our server</h4>
+                            </div>
+                            <div class="columns is-vcentered">
+                                <div id="insights" class="column is-one-third has-text-left is-hidden">
+                                    <div>
+                                        <span id="initialSize" class="tag is-danger is-light mr-2 mb-2">Initial:</span>
+                                        <span id="finalSize" class="tag is-primary is-light mb-2">Final:</span>
+                                    </div>
+                                    <div>
+                                        <span id="compressionRatio" class="tag is-info is-light">Compression
+                                            ratio:</span>
+                                    </div>
+                                </div>
+                                <div class="column has-text-right">
+                                    <a id="download"
+                                        class="button is-rounded is-primary is-light is-hidden">Download</a>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <script>
+        let messageBox = document.getElementById("msg-box");
+        let loader = document.getElementById("loader");
+
+        function stopLoading() {
+            loader.classList.add("is-hidden");
+        }
+
+        function startLoading() {
+            loader.classList.remove("is-hidden");
+        }
+
+        function aggregateData() {
+            const urlParams = new URLSearchParams(window.location.search);
+            let data = {
+                type: "probe",
+                id: urlParams.get('id')
+            }
+            return data;
+        };
+
+        function messageHandler(info) {
+            if (info.type == "info") {
+                messageBox.innerText = info.data;
+                messageBox.classList.remove("has-background-danger");
+                messageBox.classList.add("has-background-warning");
+                loader.removeAttribute("value");
+            } else if (info.type == "error") {
+                messageBox.innerText = info.data;
+                messageBox.classList.remove("has-background-warning");
+                messageBox.classList.add("has-background-danger");
+                stopLoading();
+            } else if (info.type == "url") {
+                document.getElementById('download').setAttribute("href", "/" + info.data);
+                document.getElementById('download').classList.remove("is-hidden");
+            } else if (info.type == "progress") {
+                loader.setAttribute("value", info.progress);
+                messageBox.innerText = info.data + " - " + info.progress + "%";
+                messageBox.classList.remove("has-background-danger");
+                messageBox.classList.add("has-background-warning");
+            } else if (info.type == "size") {
+                document.getElementById('insights').classList.remove('is-hidden');
+                document.getElementById('initialSize').innerText = "Initial: " + info.initial;
+                document.getElementById('finalSize').innerText = "Final: " + info.final;
+                document.getElementById('compressionRatio').innerText = "Compression ratio: " + info.ratio;
+            } else if (info.type == "finish") {
+                stopLoading();
+            }
+        }
+
+        function startWebsocket() {
+            let socket = new WebSocket("{ws_host}");
+
+            const sendData = () => {
+                let data = aggregateData();
+                socket.send(JSON.stringify(data));
+                startLoading();
+            }
+
+            socket.onopen = () => {
+                sendData();
+                console.log("Connected to server");
+                messageBox.innerText = "Connected to server";
+                messageBox.classList.remove("has-background-danger");
+                messageBox.classList.add("has-background-warning");
+            };
+
+            socket.onmessage = (event) => {
+                console.log(event.data);
+                let info = JSON.parse(event.data);
+                messageHandler(info);
+            };
+
+            socket.onclose = (event) => {
+                socket = null;
+                console.log("Close", event.code, event.reason);
+                if (event.code == 4007) {
+                    setTimeout(startWebsocket, 500);
+                } else if (event.code == 1000) {
+                    messageBox.innerText = "Ready to be downloaded";
+                }
+                else {
+                    messageBox.innerText = "Disconnected from server"
+                    messageBox.classList.remove("has-background-warning");
+                    messageBox.classList.add("has-background-danger");
+                    setTimeout(startWebsocket, 5000);
+                }
+            }
+        }
+
+        startWebsocket();
+    </script>
+</body>
+
+</html>

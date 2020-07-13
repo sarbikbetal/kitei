@@ -5,21 +5,21 @@ const fetch = require('node-fetch');
 const { spawn } = require('child_process');
 const streamPipeline = util.promisify(require('stream').pipeline);
 
-const download = (job, url, dest) => {
+const download = (job) => {
+    let url = job.data.url;
+    let dest = path.join(__dirname, `public/${job.id}.pdf`);
     return new Promise((resolve, reject) => {
         fetch(url).then(async (response) => {
             if (response.ok) {
                 let file = fs.createWriteStream(dest);
                 let totalSize = response.headers.get('content-length');
                 let timer = setInterval(() => {
-                    let percentage = (file.bytesWritten / totalSize) * 100;
                     job.reportProgress({ done: parseInt(file.bytesWritten), total: parseInt(totalSize) });
-                    console.log(`Downloaded: ${file.bytesWritten}/${totalSize} ---- ${percentage.toFixed(2)}%`)
                 }, 700);
+                console.log('\x1b[46m\x1b[30m%s\x1b[0m', `Download started: ${file.path}`);
                 await streamPipeline(response.body, file);
-                console.log(`Download Path: ${file.path}`);
                 clearInterval(timer);
-                resolve();
+                resolve(job.data);
             } else {
                 reject(response.statusText);
             }
@@ -29,14 +29,12 @@ const download = (job, url, dest) => {
     })
 };
 
-
-const convert = async (job, filename, dpi) => {
+const compress = async (job) => {
     return new Promise((resolve, reject) => {
+        const filename = `${job.id}.pdf`;
         const outName = `${Date.now().toString(18)}.pdf`;
 
-        console.log(filename, outName);
-
-        dpi = dpi || 120;
+        let dpi = job.data.dpi || 120;
         let ghostScript = process.env.GSX_OPTIMIZE_COMMAND || 'gs';
         let gsargs = [
             '-sDEVICE=pdfwrite',
@@ -56,7 +54,7 @@ const convert = async (job, filename, dpi) => {
         ]
 
         let optimizer = spawn(ghostScript, gsargs);
-        console.log(`Started conversion for ${outName} with ${dpi}dpi`);
+        console.log(`Compressing ${filename} --> ${outName} : ${dpi}dpi`);
 
         let totalPages = 1;
 
@@ -69,7 +67,6 @@ const convert = async (job, filename, dpi) => {
             if (g1)
                 totalPages = g1[1];
             else if (g2) {
-                console.log(`${g2[1]}/${totalPages}`);
                 job.reportProgress({ done: g2[1], total: totalPages });
             }
         });
@@ -103,15 +100,16 @@ const deleteFile = async (filename) => {
     try {
         console.log("filename", filename);
         await fs.promises.unlink(filename);
-        console.log(`${filename} was deleted`);
+        console.log('\x1b[41m\x1b[30m\x1b[1m%s\x1b[0m', `${filename} was deleted`);
     } catch (error) {
         console.log(error);
         throw error;
     }
 }
 
+
 module.exports = {
-    download: download,
-    convert: convert,
-    deleteFile: deleteFile
+    download,
+    compress,
+    deleteFile
 }
