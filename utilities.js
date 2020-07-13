@@ -97,14 +97,15 @@ const compress = async (job) => {
 }
 
 const deleteFile = async (filename) => {
-    try {
-        console.log("filename", filename);
-        await fs.promises.unlink(filename);
-        console.log('\x1b[41m\x1b[30m\x1b[1m%s\x1b[0m', `${filename} was deleted`);
-    } catch (error) {
-        console.log(error);
-        throw error;
-    }
+    return new Promise((resolve, reject) => {
+        fs.promises.unlink(filename).then(() => {
+            console.log('\x1b[41m\x1b[30m%s\x1b[0m', `${filename} was deleted`);
+            resolve();
+        }).catch((err) => {
+            console.log(err);
+            reject(err);
+        });
+    })
 }
 
 
