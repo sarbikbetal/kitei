@@ -34,6 +34,19 @@ const init = (server) => {
       }
     });
   });
+
+
+  server.on('close', () => {
+    console.log("Socket shutting down");
+    downloadQueue.close(5);
+    compressQueue.close(5);
+    stagingQueue.close(5);
+    wss.close((err) => {
+      if (err)
+        console.error(err);
+      console.log("Socket connections closed");
+    });
+  })
 }
 
 const sendData = (ws, data) => {
@@ -114,12 +127,5 @@ const wrapup = (ws, id, filename) => {
   sendData(ws, { type: "finish" });
   ws.close(1000);
 }
-
-process.on('SIGINT', () => {
-  console.log("Gracefully shutting down");
-  downloadQueue.close(5);
-  compressQueue.close(5);
-  stagingQueue.close(5);
-});
 
 module.exports = init;

@@ -36,9 +36,11 @@ stagingQueue.process((job) => {
     })
 })
 
-process.on('SIGINT', () => {
-    console.log("Gracefully shutting down");
+const shutdown = () => {
+    console.log("Worker shutting down");
     downloadQueue.close(5);
     compressQueue.close(5);
     stagingQueue.close(5);
-});
+}
+process.on('SIGINT', shutdown);
+process.on('SIGTERM', shutdown);

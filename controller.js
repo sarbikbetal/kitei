@@ -52,17 +52,18 @@ compressQueue.on("job failed", (jobId, err) => {
 })
 
 const addStaging = (data, id) => {
-    return stagingQueue.createJob(data).setId(id).delayUntil(Date.now() + 2 * 60 * 1000).save();
+    return stagingQueue.createJob(data).setId(id).delayUntil(Date.now() + 120 * 60 * 1000).save();
 }
 
 
-process.on('SIGINT', () => {
-    console.log("Gracefully shutting down");
+const shutdown = () => {
+    console.log("Controller shutting down");
     downloadQueue.close(5);
     compressQueue.close(5);
     stagingQueue.close(5);
-});
-
+}
+process.on('SIGINT', shutdown);
+process.on('SIGTERM', shutdown);
 
 module.exports = {
     addDownload

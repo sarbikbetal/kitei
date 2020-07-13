@@ -88,7 +88,16 @@ process.on('SIGTERM', () => {
     })
 });
 
-process.on('SIGINT', () => {
-    console.log("Gracefully shutting down");
-    server.close();
-});
+const shutdown = () => {
+    console.log("Gracefully shutting down the server");
+    server.close((err) => {
+        if (err) {
+            console.error(err);
+            process.exit(1);
+        }
+        console.log("Successfully closed the server.")
+    });
+}
+
+process.on('SIGINT', shutdown);
+process.on('SIGTERM', shutdown);
