@@ -3,6 +3,7 @@ const Queue = require('bee-queue');
 // const path = require('path');
 const fs = require('fs');
 const prettyBytes = require('pretty-bytes');
+const { rejects } = require('assert');
 const options = {
   isWorker: false,
   redis: {
@@ -24,13 +25,32 @@ const init = (server) => {
   const wss = new WebSocket.Server({ server });
 
   wss.on('connection', function connection(ws) {
+    
     ws.on('message', function incoming(message) {
       message = JSON.parse(message);
       let id = message.id;
+      
       if (message.type == "probe" && id) {
-        reportDownload(ws, id);
-        reportCompress(ws, id);
-        reportStaging(ws, id);
+        let isFound = false;
+        reportDownload(ws, id)
+          .then((data) => {
+            if (data)
+              isFound = true;
+            return reportCompress(ws, id);
+          }).then((data) => {
+            if (data)
+              isFound = true;
+            return reportStaging(ws, id);
+          }).then((data) => {
+            if (data)
+              isFound = true;
+
+            if (!isFound)
+              ws.close(4004, "The associated doc was not found");
+          }).catch((err) => {
+            console.error(err);
+            ws.close(1011);
+          })
       }
     });
   });
@@ -46,7 +66,7 @@ const init = (server) => {
         console.error(err);
       console.log("Socket connections closed");
     });
-  })
+  });
 }
 
 const sendData = (ws, data) => {
@@ -54,60 +74,83 @@ const sendData = (ws, data) => {
 }
 
 const reportDownload = (ws, id) => {
-  downloadQueue.getJob(id).then(job => {
-    if (job) {
+  return new Promise((resolve, reject) => {
+    downloadQueue.getJob(id).then(job => {
+      if (job) {
+        job.on("progress", (progress) => {
+          let pg = {
+            progress: ((progress.done / progress.total) * 100).toFixed(1),
+            type: "progress",
+            data: `Downloaded ${prettyBytes(progress.done)} of ${prettyBytes(progress.total)}`
+          };
+          sendData(ws, pg);
+        });
 
-      job.on("progress", (progress) => {
-        let pg = {
-          progress: ((progress.done / progress.total) * 100).toFixed(1),
-          type: "progress",
-          data: `Downloaded ${prettyBytes(progress.done)} of ${prettyBytes(progress.total)}`
-        };
-        sendData(ws, pg);
-      });
+        job.on("succeeded", () => {
+          ws.close(4007, "Please reconnect");
+        });
 
-      job.on("succeeded", () => {
-        ws.close(4007, "Please reconnect");
-      });
-
-    } else
-      console.log(`${id} : Download job not found`);
-  }).catch(console.log);
+        resolve(true);
+      } else {
+        console.log(`${id} : Download job not found`);
+        resolve(false);
+      }
+    }).catch((err) => {
+      console.log(err);
+      reject();
+    });
+  })
 }
 
 const reportCompress = (ws, id) => {
-  compressQueue.getJob(id).then(job => {
-    if (job) {
-      job.on("progress", (progress) => {
-        let pg = {
-          progress: ((progress.done / progress.total) * 100).toFixed(1),
-          type: "progress",
-          data: `Compressing  ${progress.done}/${progress.total} pages`
-        };
-        sendData(ws, pg);
-      });
+  return new Promise((resolve, reject) => {
+    compressQueue.getJob(id).then(job => {
+      if (job) {
+        job.on("progress", (progress) => {
+          let pg = {
+            progress: ((progress.done / progress.total) * 100).toFixed(1),
+            type: "progress",
+            data: `Compressing  ${progress.done}/${progress.total} pages`
+          };
+          sendData(ws, pg);
+        });
 
-      job.on("succeeded", (filename) => {
-        console.log(`Sending compression progress report for ${id}`);
-        let info = {
-          type: "info",
-          data: "Compressed and ready"
-        };
-        sendData(ws, info);
-        wrapup(ws, id, filename)
-      })
-    } else
-      console.log(`${id} : Compression job not found`);
-  }).catch(console.log);
+        job.on("succeeded", (filename) => {
+          console.log(`Sending compression progress report for ${id}`);
+          let info = {
+            type: "info",
+            data: "Compressed and ready"
+          };
+          sendData(ws, info);
+          wrapup(ws, id, filename)
+        })
+        resolve(true);
+      } else {
+        console.log(`${id} : Compression job not found`);
+        resolve(false);
+      }
+    }).catch((err) => {
+      console.log(err);
+      reject();
+    });
+  })
 }
 
 const reportStaging = (ws, id) => {
-  stagingQueue.getJob(id).then(job => {
-    if (job) {
-      wrapup(ws, id, job.data);
-    } else
-      console.log(`${id} : Staged job not found`);
-  }).catch(console.log);
+  return new Promise((resolve, reject) => {
+    stagingQueue.getJob(id).then(job => {
+      if (job) {
+        wrapup(ws, id, job.data);
+        resolve(true);
+      } else {
+        console.log(`${id} : Staged job not found`);
+        resolve(false);
+      }
+    }).catch((err) => {
+      console.log(err);
+      reject();
+    });
+  })
 }
 
 const wrapup = (ws, id, filename) => {

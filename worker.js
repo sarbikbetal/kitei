@@ -29,8 +29,8 @@ compressQueue.process((job) => {
 
 stagingQueue.process((job) => {
     return new Promise((resolve, reject) => {
-        deleteFile(`${job.id}.pdf`)
-            .then(() => deleteFile(`${job.data}.pdf`))
+        deleteFile(`./public/${job.id}.pdf`)
+            .then(() => deleteFile(`./public/${job.data}`))
             .then(() => { resolve() })
             .catch((err) => console.log("Error deleting files", err))
     })

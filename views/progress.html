@@ -48,7 +48,7 @@
                                     max="100"></progress>
                             </div>
                             <div class="level">
-                                <h4 class="is-size-4">Getting the details from our server</h4>
+                                <h4 id="mainInfo" class="is-size-4">Getting details from our server</h4>
                             </div>
                             <div class="columns is-vcentered">
                                 <div id="insights" class="column is-one-third has-text-left is-hidden">
@@ -95,6 +95,7 @@
         };
 
         function messageHandler(info) {
+            document.getElementById("mainInfo").innerText = "";
             if (info.type == "info") {
                 messageBox.innerText = info.data;
                 messageBox.classList.remove("has-background-danger");
@@ -149,10 +150,17 @@
             socket.onclose = (event) => {
                 socket = null;
                 console.log("Close", event.code, event.reason);
-                if (event.code == 4007) {
+                if (event.code == 4004) {
+                    document.getElementById("mainInfo").innerText = "Sorry, this document does not seem to exist";
+                    stopLoading();
+                }
+                else if (event.code == 4007) {
                     setTimeout(startWebsocket, 500);
                 } else if (event.code == 1000) {
                     messageBox.innerText = "Ready to be downloaded";
+                }  else if(event.code == 1000){
+                    document.getElementById("mainInfo").innerText = "Whoa! There was an error";
+                    stopLoading();
                 }
                 else {
                     messageBox.innerText = "Disconnected from server"
