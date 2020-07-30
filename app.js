@@ -7,6 +7,7 @@ const controller = require('./controller.js');
 const wsInit = require("./socket");
 const whiskers = require("whiskers");
 const enforce = require('express-sslify');
+const { isValidURL } = require('./utilities');
 
 // Inits
 const app = express();
@@ -48,7 +49,7 @@ app.get('/pdf', (req, res) => {
 app.post('/pdf', (req, res) => {
     let { url, dpi } = req.body;
 
-    if (url && dpi) {
+    if (isValidURL(url) && dpi) {
         let id = Date.now().toString(36);
         controller.addDownload({ url, dpi }, id)
             .then((job) => {

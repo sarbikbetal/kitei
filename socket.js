@@ -90,6 +90,12 @@ const reportDownload = (ws, id) => {
           ws.close(4007, "Please reconnect");
         });
 
+        let info = {
+          type: "info",
+          data: "Your downloading is waiting ..."
+        };
+        sendData(ws, info);
+
         resolve(true);
       } else {
         console.log(`${id} : Download job not found`);
@@ -123,7 +129,14 @@ const reportCompress = (ws, id) => {
           };
           sendData(ws, info);
           wrapup(ws, id, filename)
-        })
+        });
+
+        let info = {
+          type: "info",
+          data: "Waiting for compressor ..."
+        };
+        sendData(ws, info);
+
         resolve(true);
       } else {
         console.log(`${id} : Compression job not found`);
