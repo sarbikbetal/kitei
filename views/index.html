@@ -75,8 +75,15 @@
     <script>
         let sendBtn = document.getElementById("send");
 
-        sendBtn.addEventListener('click', () => {
+        sendBtn.addEventListener('click', (e) => {
+
             let data = aggregateData();
+            if (!data.url) {
+                return;
+            }
+
+            e.target.disabled = true;
+
             const options = {
                 method: 'POST',
                 body: JSON.stringify(data),
@@ -86,14 +93,18 @@
             }
 
             fetch("/pdf", options)
-                .then(res => res.json())
-                .then(data => {
+                .then(res => {
+                    e.target.disabled = false;
+                    return res.json();
+                }).then(data => {
                     console.log(data);
                     let { id, status } = data;
                     if (status == 'created' && id)
                         window.location.href = '/pdf?id=' + id;
-
                     // add a popup on else
+                }).catch(err => {
+                    e.target.disabled = false;
+                    console.log(err);
                 });
         })
 

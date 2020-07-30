@@ -4,6 +4,8 @@ const util = require('util');
 const fetch = require('node-fetch');
 const { spawn } = require('child_process');
 const streamPipeline = util.promisify(require('stream').pipeline);
+const FileType = require('file-type');
+
 
 const download = (job) => {
     let url = job.data.url;
@@ -17,7 +19,9 @@ const download = (job) => {
                     job.reportProgress({ done: parseInt(file.bytesWritten), total: parseInt(totalSize) });
                 }, 700);
                 console.log('\x1b[46m\x1b[30m%s\x1b[0m', `Download started: ${file.path}`);
-                await streamPipeline(response.body, file);
+                const fileTypeStream = await FileType.stream(response.body);
+                console.log(fileTypeStream.fileType);
+                await streamPipeline(fileTypeStream, file);
                 clearInterval(timer);
                 resolve(job.data);
             } else {
@@ -108,9 +112,19 @@ const deleteFile = async (filename) => {
     })
 }
 
+const isValidURL = (str) => {
+    let pattern = new RegExp('^(https?:\\/\\/)?' + // protocol
+        '((([a-z\\d]([a-z\\d-]*[a-z\\d])*)\\.)+[a-z]{2,}|' + // domain name
+        '((\\d{1,3}\\.){3}\\d{1,3}))' + // OR ip (v4) address
+        '(\\:\\d+)?(\\/[-a-z\\d%_.~+]*)*' + // port and path
+        '(\\?[;&a-z\\d%_.~+=-]*)?' + // query string
+        '(\\#[-a-z\\d_]*)?$', 'i'); // fragment locator
+    return !!pattern.test(str);
+}
 
 module.exports = {
     download,
     compress,
-    deleteFile
+    deleteFile,
+    isValidURL
 }

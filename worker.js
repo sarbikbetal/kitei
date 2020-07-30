@@ -19,11 +19,11 @@ const stagingQueue = new Queue('kti_stg', {
     activateDelayedJobs: true
 });
 
-downloadQueue.process((job) => {
+downloadQueue.process(5, (job) => {
     return download(job);
 })
 
-compressQueue.process((job) => {
+compressQueue.process(3, (job) => {
     return compress(job);
 })
 
