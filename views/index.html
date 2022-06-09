@@ -47,19 +47,39 @@
                             </div>
                             <div class="content">
                                 <div class="field">
-                                    <label class="label">URL:</label>
+                                    <label class="label">URL</label>
                                     <div class="control">
                                         <textarea class="textarea" rows="2" id="url"
                                             placeholder="http://example.com/zym.pdf"></textarea>
                                     </div>
                                 </div>
-                                <label class="label">Quality</label>
-                                <div class="select">
-                                    <select id="dpi">
-                                        <option value="150">High</option>
-                                        <option selected value="130">Medium</option>
-                                        <option value="100">Low</option>
-                                    </select>
+                                <div class="columns">
+                                    <div class="column is-narrow field">
+                                        <label class="label">Method</label>
+                                        <div class="select">
+                                            <select id="method">
+                                                <option selected value="GET">Get</option>
+                                                <option value="POST">Post</option>
+                                            </select>
+                                        </div>
+                                    </div>
+                                    <div class="column is-narrow field">
+                                        <label class="label">Quality</label>
+                                        <div class="select">
+                                            <select id="dpi">
+                                                <option value="150">High</option>
+                                                <option selected value="130">Medium</option>
+                                                <option value="100">Low</option>
+                                            </select>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="field">
+                                    <label class="label">Data</label>
+                                    <div class="control">
+                                        <textarea class="textarea is-family-code" rows="2" id="data"
+                                            placeholder="{api-key: no34n23r0incx02em}"></textarea>
+                                    </div>
                                 </div>
                             </div>
                             <div class="column has-text-right">
@@ -111,7 +131,9 @@
         function aggregateData() {
             let data = {
                 url: document.getElementById("url").value,
-                dpi: document.getElementById("dpi").value
+                method: document.getElementById("method").value,
+                dpi: document.getElementById("dpi").value,
+                data: document.getElementById("data").value
             }
             return data;
         };
