@@ -10,27 +10,52 @@ const FileType = require('file-type');
 const download = (job) => {
     let url = job.data.url;
     let dest = path.join(__dirname, `public/${job.id}.pdf`);
-    return new Promise((resolve, reject) => {
-        fetch(url).then(async (response) => {
-            if (response.ok) {
-                let file = fs.createWriteStream(dest);
-                let totalSize = response.headers.get('content-length');
-                let timer = setInterval(() => {
-                    job.reportProgress({ done: parseInt(file.bytesWritten), total: parseInt(totalSize) });
-                }, 700);
-                console.log('\x1b[46m\x1b[30m%s\x1b[0m', `Download started: ${file.path}`);
-                const fileTypeStream = await FileType.stream(response.body);
-                console.log(fileTypeStream.fileType);
-                await streamPipeline(fileTypeStream, file);
-                clearInterval(timer);
-                resolve(job.data);
-            } else {
-                reject(response.statusText);
-            }
-        }).catch((err) => {
-            reject(err.message);
+    if(job.data.method === "GET"){
+        return new Promise((resolve, reject) => {
+            fetch(url, { method: "GET" }).then(async (response) => {
+                if (response.ok) {
+                    let file = fs.createWriteStream(dest);
+                    let totalSize = response.headers.get('content-length');
+                    let timer = setInterval(() => {
+                        job.reportProgress({ done: parseInt(file.bytesWritten), total: parseInt(totalSize) });
+                    }, 700);
+                    console.log('\x1b[46m\x1b[30m%s\x1b[0m', `Download started: ${file.path}`);
+                    const fileTypeStream = await FileType.stream(response.body);
+                    console.log(fileTypeStream.fileType);
+                    await streamPipeline(fileTypeStream, file);
+                    clearInterval(timer);
+                    resolve(job.data);
+                } else {
+                    reject(response.statusText);
+                }
+            }).catch((err) => {
+                reject(err.message);
+            })
         })
-    })
+    }
+    else if(job.data.method === "POST"){
+        return new Promise((resolve, reject) => {
+            fetch(url,{ method: "POST", body: job.data.body }).then(async (response) => {
+                if (response.ok) {
+                    let file = fs.createWriteStream(dest);
+                    let totalSize = response.headers.get('content-length');
+                    let timer = setInterval(() => {
+                        job.reportProgress({ done: parseInt(file.bytesWritten), total: parseInt(totalSize) });
+                    }, 700);
+                    console.log('\x1b[46m\x1b[30m%s\x1b[0m', `Download started: ${file.path}`);
+                    const fileTypeStream = await FileType.stream(response.body);
+                    console.log(fileTypeStream.fileType);
+                    await streamPipeline(fileTypeStream, file);
+                    clearInterval(timer);
+                    resolve(job.data);
+                } else {
+                    reject(response.statusText);
+                }
+            }).catch((err) => {
+                reject(err.message);
+            })
+        })
+    }
 };
 
 const compress = async (job) => {

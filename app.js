@@ -47,11 +47,11 @@ app.get('/pdf', (req, res) => {
 })
 
 app.post('/pdf', (req, res) => {
-    let { url, dpi } = req.body;
+    let { url, dpi, method, body } = req.body;
 
     if (isValidURL(url) && dpi) {
         let id = Date.now().toString(36);
-        controller.addDownload({ url, dpi }, id)
+        controller.addDownload({ url, dpi, method, body }, id)
             .then((job) => {
                 let { id, data, status } = job;
                 res.json({ id, data, status });
